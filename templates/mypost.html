@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title></title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+    <link
+      href="{{ url_for('static', filename='style.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="{{ url_for('static', filename='myjs.js') }}"></script>
+    <script>
+      $(document).ready(function () {
+        get_posts("{{user_info.username}}");
+      });
+
+      function edit(id) {
+        let comment = $(`#textarea-post-${id}`).val();
+        $.ajax({
+          type: "POST",
+          url: "/edit/" + id,
+          data: {
+            comment_give: comment,
+          },
+          success: function (response) {
+            window.location.reload();
+          },
+        });
+      }
+      function hapus(id) {
+        $.ajax({
+          type: "POST",
+          url: "/hapus/" + id,
+          success: function (response) {
+            window.location.reload();
+          },
+        });
+      }
+      function sign_out() {
+        $.removeCookie("mytoken", {
+          path: "/",
+        });
+        alert("Signed out!");
+        window.location.href = "/login";
+      }
+
+      function get_posts(username) {
+        if (username == undefined) {
+          username = "";
+        }
+
+        $("#post-box").empty();
+        $.ajax({
+          type: "GET",
+          url: `/get_posts?username_give=${username}`,
+          data: {},
+          success: function (response) {
+            if (response["result"] === "success") {
+              let posts = response["posts"];
+              for (let i = 0; i < posts.length; i++) {
+                let post = posts[i];
+                console.log(post);
+                let time_post = new Date(post["date"]);
+                let time_before = time2str(time_post);
+                let class_heart = post["heart_by_me"]
+                  ? "fa-heart"
+                  : "fa-heart-o";
+                let class_star = post["star_by_me"] ? "fa-star" : "fa-star-o";
+                let class_thumbsup = post["thumbsup_by_me"]
+                  ? "fa-thumbs-up"
+                  : "fa-thumbs-o-up";
+                let html_temp = `
+                <div class="modal" id="modal-post-${post["_id"]}">
+      <div
+        class="modal-background"
+        onclick='$("#modal-post-${post["_id"]}").removeClass("is-active")'
+      ></div>
+      <div class="modal-content">
+        <div class="box">
+          <article class="media">
+            <div class="media-content">
+              <div class="field">
+                <p class="control">
+                  <textarea
+                    id="textarea-post-${post["_id"]}"
+                    class="textarea"
+                  >${post["comment"]}</textarea>
+                </p>
+              </div>
+              <nav class="level is-mobile">
+                <div class="level-left"></div>
+                <div class="level-right">
+                  <div class="level-item">
+                    <a class="button is-sparta" onclick="edit('${
+                      post["_id"]
+                    }')">Edit post</a>
+
+                  </div>
+                  <div class="level-item">
+                    <a
+                      class="button is-sparta is-outlined"
+                      onclick='$("#modal-post-${
+                        post["_id"]
+                      }").removeClass("is-active")'
+                      >Cancel</a
+                    >
+                  </div>
+                </div>
+              </nav>
+            </div>
+          </article>
+        </div>
+      </div>
+      <button
+        class="modal-close is-large"
+        aria-label="close"
+        onclick='$("#modal-post").removeClass("is-active")'
+      ></button>
+    </div>
+            <div class="box" id="${post["_id"]}" >
+                <article class="media">
+                    <div class="media-left">
+                        <a class="image is-64x64" href="/">
+                            <img class="is-rounded" src="https://source.unsplash.com/200x200/?random"
+                                  alt="Image">
+                        </a>
+                    </div>
+                    <div class="media-content">
+                        <div class="content">
+                            <p>
+                                <strong>${post["username"]}</strong> <small>@${
+                  post["username"]
+                }</small> <small>${time_before}</small>
+                                <br>
+                                ${post["comment"]}
+                            </p>
+                        </div>
+                                            <a
+        class="button level-item has-text-centered is-sparta"
+        aria-label="edit"
+        onclick='$("#modal-post-${post["_id"]}").addClass("is-active")'
+      >
+        Edit<span class="icon is-small"
+          ><i class="fa fa-pencil" aria-hidden="true"></i
+        ></span>
+      </a>
+
+      <a
+        class="button level-item has-text-centered is-sparta is-outlined"
+        aria-label="logout"
+        onclick="hapus('${post["_id"]}')"
+      >
+        Delete<span class="icon is-small"
+          ><i class="fa fa-sign-out" aria-hidden="true"></i
+        ></span>
+      </a>
+                        <nav class="level is-mobile">
+                            <div class="level-left">
+                                <a class="level-item is-sparta" aria-label="heart" onclick="toggle_like('${
+                                  post["_id"]
+                                }', 'heart')">
+                                    <span class="icon is-small"><i class="fa ${class_heart}"
+                                    aria-hidden="true"></i></span>&nbsp;<span class="like-num">${num2str(
+                                      post["count_heart"]
+                                    )}</span>
+                                </a>
+                                <a class="level-item is-sparta" aria-label="star" onclick="toggle_star('${
+                                  post["_id"]
+                                }', 'star')">
+                                    <span class="icon is-small"><i class="fa ${class_star}"
+                                    aria-hidden="true"></i></span>&nbsp;<span class="like-num">${num2str(
+                                      post["count_star"]
+                                    )}</span>
+                                </a>
+                                <a class="level-item is-sparta" aria-label="thumbsup" onclick="toggle_thumbsup('${
+                                  post["_id"]
+                                }', 'thumbsup')">
+                                    <span class="icon is-small"><i class="fa ${class_thumbsup}"
+                                    aria-hidden="true"></i></span>&nbsp;<span class="like-num">${num2str(
+                                      post["count_thumbsup"]
+                                    )}</span>
+                                </a>
+                            </div>
+
+                        </nav>
+                    </div>
+                </article>
+              </div>`;
+                $("#post-box").append(html_temp);
+              }
+            }
+          },
+        });
+      }
+    
+    
+    </script>
+  </head>
+
+  <body>
+    <nav
+      class="navbar navbar bg-primary navbar-expand-lg bg-body-tertiary"
+      data-bs-theme="dark"
+    >
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/home">ML Playbook</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNavDropdown"
+          aria-controls="navbarNavDropdown"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse px-5 d-flex justify-content-between" id="navbarNavDropdown">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a
+                class="{{ 'nav-link active' if active_page == 'home' else 'nav-link' }} active"
+                aria-current="page"
+                href="/home"
+                >Home</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="{{ 'nav-link active' if active_page == 'discussion' else 'nav-link' }}"
+                href="/discussion"
+                >Discussion</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="{{ 'nav-link active' if active_page == 'hero_story' else 'nav-link' }}"
+                href="/hero_story"
+                >Story</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="{{ 'nav-link active' if active_page == 'interactive_maps' else 'nav-link' }}"
+                href="/interactive_maps"
+                >Interactive Maps</a
+              >
+            </li>
+          </ul>
+          {% if user_info %}
+          <div class="flex-shrink-0 dropdown">
+            <a
+              href="#"
+              class="d-block link-body-emphasis text-decoration-none dropdown-toggle show"
+              data-bs-toggle="dropdown"
+              aria-expanded="true"
+            >
+              <img
+                src="https://github.com/mdo.png"
+                alt="mdo"
+                width="32"
+                height="32"
+                class="rounded-circle"
+              />
+            </a>
+            <ul
+              class="dropdown-menu text-small shadow"
+              style="
+                position: absolute;
+                inset: 0px 0px auto auto;
+                margin: 0px;
+                transform: translate(0px, 34px);
+              "
+              data-popper-placement="bottom-end"
+            >
+              <li>
+                <hr class="dropdown-divider" />
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" onclick="sign_out()"
+                  >Sign out</a
+                >
+              </li>
+            </ul>
+          </div>
+          {% else %}
+          <button
+            class="btn btn-outline-success"
+            type="button"
+            onclick="location.href='/login'"
+          >
+            Login
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+    <section class="hero is-white">
+      <div
+        class="hero-body"
+        style="padding-bottom: 1rem; margin: auto; min-width: 400px"
+      >
+        <figure class="media-left" style="align-self: center">
+          <a class="image is-96x96" href="#">
+            <img
+              class="is-rounded"
+              src="https://source.unsplash.com/200x200/?random"
+            />
+          </a>
+        </figure>
+        <div class="media-content">
+          <div class="content">
+            <p>
+              <strong>{{ user_info.username }}</strong>
+              <small>@{{ user_info.username }}</small>
+              <br />
+              {{ user_info.profile_info }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div id="post-box" class="container">
+        <div class="box">
+          <article class="media">
+            <div class="media-left">
+              <a class="image is-64x64" href="#">
+                <img
+                  class="is-rounded"
+                  src='{{ url_for("static", filename="profile_pics/profile_placeholder.png") }}'
+                  alt="Image"
+                />
+              </a>
+            </div>
+            <div class="media-content">
+              <div class="content">
+                <p>
+                  <strong>Somebody</strong> <small>@somebody</small>
+                  <small>10 minutes ago</small>
+                  <br />
+                  Comment section
+                </p>
+              </div>
+              <nav class="level is-mobile">
+                <div class="level-left">
+                  <a
+                    class="level-item is-sparta"
+                    aria-label="heart"
+                    onclick="toggle_like('', 'heart')"
+                  >
+                    <span class="icon is-small"
+                      ><i class="fa fa-heart" aria-hidden="true"></i></span
+                    >&nbsp;<span class="like-num">2.7k</span>
+                  </a>
+                </div>
+              </nav>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>
